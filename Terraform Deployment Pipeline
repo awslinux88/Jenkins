@@ -1,0 +1,71 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_ACCESS_KEY_ID     = credentials('aws-access-key-id')
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/your-username/your-terraform-repo.git'
+            }
+        }
+
+        stage('Install Terraform') {
+            steps {
+                sh '''
+                curl -LO https://releases.hashicorp.com/terraform/0.14.9/terraform_0.14.9_linux_amd64.zip
+                unzip terraform_0.14.9_linux_amd64.zip
+                sudo mv terraform /usr/local/bin/
+                terraform version
+                '''
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                sh 'terraform init'
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                sh 'terraform plan -out=tfplan'
+            }
+        }
+
+        stage('Manual Approval') {
+            steps {
+                script {
+                    input message: 'Do you want to proceed with Terraform apply?', ok: 'Approve'
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                sh 'terraform apply -input=false tfplan'
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                cleanWs()
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo 'Terraform deployment completed successfully!'
+        }
+        failure {
+            echo 'Terraform deployment failed.'
+        }
+    }
+}
