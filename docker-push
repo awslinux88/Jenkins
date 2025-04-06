@@ -1,0 +1,23 @@
+pipeline {
+    agent any
+    stages {
+        stage('docker pull hello-world image'){
+            steps {
+                sh '''
+                    docker pull hello-world
+                '''
+            }
+        }    
+
+        stage('docker push image to docker hub'){
+            steps{
+                withDockerRegistry(credentialsId: 'dockerhub', url: 'https://index.docker.io/v1/') {
+                    sh '''
+                        docker tag hello-world awslinux88/hello-world:latest
+                        docker push awslinux88/hello-world:latest
+                    '''
+                }    
+            }
+        }
+    }
+}
